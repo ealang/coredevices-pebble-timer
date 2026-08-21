@@ -352,6 +352,16 @@ bool detail_window_get_topmost_window(DetailWindow *detail_window) {
 
 
 /*
+ * get the timer associated with the window
+ */
+
+CountdownTimer *detail_window_get_countdown_timer(DetailWindow *detail_window) {
+  return detail_window->countdown_timer;
+}
+
+
+
+/*
  * set the timer associated with the window
  */
 
@@ -367,7 +377,7 @@ void detail_window_set_countdown_timer(DetailWindow *detail_window,
  */
 
 void detail_window_refresh(DetailWindow *detail_window) {
-  if (detail_window->window == NULL) {
+  if (detail_window->window == NULL || detail_window->countdown_timer == NULL) {
     return;
   }
 

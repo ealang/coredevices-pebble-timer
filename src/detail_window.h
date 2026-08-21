@@ -14,6 +14,8 @@
  *                          bool animated);
  *      bool            detail_window_get_topmost_window(DetailWindow
  *                          *detail_window);
+ *      CountdownTimer  *detail_window_get_countdown_timer(DetailWindow
+ *                          *detail_window);
  *      void            detail_window_set_countdown_timer(DetailWindow
  *                          *detail_window, CountdownTimer *countdown_timer);
  *      void            detail_window_refresh(DetailWindow *detail_window);
@@ -166,6 +168,20 @@ void detail_window_pop(DetailWindow *detail_window, bool animated);
  */
 
 bool detail_window_get_topmost_window(DetailWindow *detail_window);
+
+
+
+/*
+ * Function:    detail_window_get_countdown_timer
+ * ----------------------------------------------
+ * gets the CountdownTimer currently associated with the detail window
+ *
+ *  detail_window: a pointer to the DetailWindow being checked
+ *
+ *  returns: the assigned CountdownTimer, or NULL if there is none
+ */
+
+CountdownTimer *detail_window_get_countdown_timer(DetailWindow *detail_window);
 
 
 

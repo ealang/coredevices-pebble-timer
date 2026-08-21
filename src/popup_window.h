@@ -17,6 +17,8 @@
  *                      *popup_window);
  *      void            popup_window_set_auto_close_duration(PopupWindow
  *                          *popup_window, int64_t duration);
+ *      CountdownTimer  *popup_window_get_countdown_timer(PopupWindow
+ *                          *popup_window);
  *      void            popup_window_set_countdown_timer(PopupWindow
  *                          *popup_window, CountdownTimer *countdown_timer);
  *      void            popup_window_refresh(PopupWindow *popup_window);
@@ -209,6 +211,20 @@ void popup_window_set_auto_close_duration(PopupWindow *popup_window, int64_t dur
  */
 
 void popup_window_set_vibes(bool chime);
+
+
+/*
+ * Function:    popup_window_get_countdown_timer
+ * ----------------------------------------------
+ * gets the CountdownTimer currently associated with the PopupWindow
+ *
+ *  popup_window: a pointer to the PopupWindow being checked
+ *
+ *  returns: the assigned CountdownTimer, or NULL if there is none
+ */
+
+CountdownTimer *popup_window_get_countdown_timer(PopupWindow *popup_window);
+
 
 
 /*

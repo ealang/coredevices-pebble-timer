@@ -145,6 +145,41 @@ static void prv_promote_timer(CountdownTimer *countdown_timer) {
 
 
 
+/*
+ * release everything belonging to the timer that is about to be evicted
+ *
+ * countdown_timer_list_add() silently destroys the last timer in the list when
+ * the list is full, but it only knows about the array: the evicted timer's
+ * Timeline pin would outlive it, and the DetailWindow or PopupWindow could be
+ * left holding a pointer to freed memory. Call this immediately before adding
+ * to a full list.
+ */
+
+static void prv_evict_if_full(void) {
+  if (s_countdown_timers_count < COUNTDOWN_TIMERS_MAX) {
+    return;
+  }
+
+  // the list is sorted most-recently-used first, so the last entry is the one
+  // countdown_timer_list_add() is about to free
+  CountdownTimer *countdown_timer = s_countdown_timers[COUNTDOWN_TIMERS_MAX - 1];
+
+  if (countdown_timer_get_duration(countdown_timer) >= TIMELINE_MIN_LENGTH) {
+    phone_delete_pin(countdown_timer);
+  }
+
+  if (detail_window_get_countdown_timer(s_detail_window) == countdown_timer) {
+    detail_window_pop(s_detail_window, true);
+    detail_window_set_countdown_timer(s_detail_window, NULL);
+  }
+  if (popup_window_get_countdown_timer(s_popup_window) == countdown_timer) {
+    popup_window_pop(s_popup_window, true);
+    popup_window_set_countdown_timer(s_popup_window, NULL);
+  }
+}
+
+
+
 /*******************************************************************************
  * CALLBACKS
  */
@@ -272,6 +307,7 @@ static void setting_window_complete_callback(int64_t duration, void *context) {
   // check if new timer or editing
   if (countdown_timer == NULL) {
     countdown_timer = countdown_timer_create(duration, &s_countdown_timer_id_max);
+    prv_evict_if_full();
     countdown_timer_list_add(s_countdown_timers, COUNTDOWN_TIMERS_MAX,
       &s_countdown_timers_count, countdown_timer);
     countdown_timer_start(countdown_timer);

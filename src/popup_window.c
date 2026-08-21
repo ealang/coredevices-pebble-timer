@@ -516,6 +516,16 @@ void popup_window_set_vibes(bool chime) {
 
 
 /*
+ * gets the CountdownTimer associated with this PopupWindow
+ */
+
+CountdownTimer *popup_window_get_countdown_timer(PopupWindow *popup_window) {
+  return popup_window->countdown_timer;
+}
+
+
+
+/*
  * sets the CountdownTimer associated with this PopupWindow
  */
 
