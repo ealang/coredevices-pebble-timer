@@ -105,14 +105,14 @@
       ]
     },
     "projectType": "native",
-    "uuid": "c64aae42-b822-4d6d-995b-bc7c38e843f4",
+    "uuid": "6ba47813-25c2-4c9e-b93a-f6f24372b4c3",
     "messageKeys": {
       "KEY_TOTAL_TIME": 15,
       "KEY_UNIQUEID": 10,
       "KEY_DURATION": 5
     },
     "enableMultiJS": true,
-    "displayName": "Timer",
+    "displayName": "Agent Timer",
     "watchapp": {
       "onlyShownOnCommunication": false,
       "hiddenApp": false,
