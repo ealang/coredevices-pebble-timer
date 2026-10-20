@@ -109,7 +109,8 @@
     "messageKeys": {
       "KEY_TOTAL_TIME": 15,
       "KEY_UNIQUEID": 10,
-      "KEY_DURATION": 5
+      "KEY_DURATION": 5,
+      "KEY_START_TIMER": 20
     },
     "enableMultiJS": true,
     "displayName": "Agent Timer",

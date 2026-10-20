@@ -13,6 +13,10 @@
 #define KEY_DURATION 5
 #define KEY_UNIQUEID 10
 #define KEY_TOTAL_TIME 15
+#define KEY_START_TIMER 20
+
+// set once at connect; there is only ever one of these
+static PhoneStartTimerHandler s_start_timer_handler = NULL;
 
 
 
@@ -50,6 +54,14 @@ void phone_delete_pin(CountdownTimer *countdown_timer) {
 static void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Outbox send success!");
 }
+// a message arrived from the phone
+static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
+  Tuple *start_timer = dict_find(iterator, KEY_START_TIMER);
+  if (start_timer == NULL || s_start_timer_handler == NULL) {
+    return;
+  }
+  s_start_timer_handler(start_timer->value->int32);
+}
 // error callbacks
 static void inbox_dropped_callback(AppMessageResult reason, void *context) {
   APP_LOG(APP_LOG_LEVEL_ERROR, "Message dropped!");
@@ -63,8 +75,10 @@ static void outbox_failed_callback(DictionaryIterator *iterator, AppMessageResul
 
 // ********** Initialize/De-initialize ********** //
 // start phone connection
-void phone_connect(void) {
+void phone_connect(PhoneStartTimerHandler start_timer_handler) {
+  s_start_timer_handler = start_timer_handler;
   // register callbacks
+  app_message_register_inbox_received(inbox_received_callback);
   app_message_register_inbox_dropped(inbox_dropped_callback);
   app_message_register_outbox_failed(outbox_failed_callback);
   app_message_register_outbox_sent(outbox_sent_callback);
@@ -76,4 +90,5 @@ void phone_connect(void) {
 void phone_disconnect(void) {
   // unregister callbacks
   app_message_deregister_callbacks();
+  s_start_timer_handler = NULL;
 }

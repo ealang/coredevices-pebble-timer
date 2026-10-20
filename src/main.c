@@ -26,6 +26,7 @@
 #define COUNTDOWN_TIMERS_MAX 8
 #define COUNTDOWN_TIMER_SNOOZE_DELAY 60000 // milliseconds
 #define TIMER_MIN_LENGTH 5000 // milliseconds
+#define TIMER_MAX_LENGTH 86399000 // milliseconds; 23:59:59, what the setting screen tops out at
 #define TIMELINE_MIN_LENGTH 900000 // milliseconds
 #define INACTIVITY_THRESHOLD 900000 // length of time before refresh throttling in milliseconds
 #define INACTIVE_REFRESH_DELAY 1000 // ms between frames after throttling
@@ -180,9 +181,78 @@ static void prv_evict_if_full(void) {
 
 
 
+/*
+ * create a timer, start it, and put it in the list
+ *
+ * everything that has to happen for a new timer to exist and be running, with
+ * no decision about what the user should be shown -- the setting screen and the
+ * phone want the same model change but very different visuals.
+ */
+
+static CountdownTimer *prv_create_and_start_timer(int64_t duration) {
+  CountdownTimer *countdown_timer = countdown_timer_create(duration, &s_countdown_timer_id_max);
+  prv_evict_if_full();
+  countdown_timer_list_add(s_countdown_timers, COUNTDOWN_TIMERS_MAX,
+    &s_countdown_timers_count, countdown_timer);
+  countdown_timer_start(countdown_timer);
+  return countdown_timer;
+}
+
+
+
 /*******************************************************************************
  * CALLBACKS
  */
+
+/*
+ * Phone start-timer callback
+ *
+ * the phone launches the app before sending this, so whatever is on screen is
+ * not something the user chose to be looking at -- and a timer created behind
+ * the setting screen looks exactly like a request that did nothing. Show the
+ * new timer instead.
+ */
+
+static void phone_start_timer_callback(int32_t seconds) {
+  int64_t duration = (int64_t)seconds * 1000;
+  // the request arrives unvalidated, and a bad duration would create a timer
+  // that cannot be reached or corrected from the watch
+  if (duration < TIMER_MIN_LENGTH || duration > TIMER_MAX_LENGTH) {
+    APP_LOG(APP_LOG_LEVEL_WARNING, "Ignoring a start-timer request of %ld seconds", (long)seconds);
+    return;
+  }
+
+  CountdownTimer *countdown_timer = prv_create_and_start_timer(duration);
+  if (duration >= TIMELINE_MIN_LENGTH) {
+    phone_send_pin(countdown_timer);
+  }
+  prv_promote_timer(countdown_timer);
+
+  // update visuals
+  menu_window_reload_data(s_menu_window);
+  menu_window_refresh(s_menu_window);
+
+  // a timer that is already ringing keeps the screen: it owns the vibration,
+  // and it only refreshes and auto-closes while it is on top
+  if (!popup_window_get_topmost_window(s_popup_window)) {
+    // the setting screen has to go rather than be covered, or backing out of
+    // the new timer would land on a half-finished one the user never opened
+    setting_window_pop(s_setting_window, false);
+    detail_window_set_countdown_timer(s_detail_window, countdown_timer);
+    if (!detail_window_get_topmost_window(s_detail_window)) {
+      detail_window_push(s_detail_window, true);
+    }
+    detail_window_deep_refresh(s_detail_window);
+  }
+
+  // refresh now, and count this as activity so the new timer ticks at full rate
+  if (s_app_timer != NULL) {
+    app_timer_reschedule(s_app_timer, MIN_REFRESH_DELAY);
+  }
+  s_last_activity = countdown_timer_get_epoch_ms();
+}
+
+
 
 /*
  * AppTimer callback
@@ -306,11 +376,7 @@ static void setting_window_complete_callback(int64_t duration, void *context) {
 
   // check if new timer or editing
   if (countdown_timer == NULL) {
-    countdown_timer = countdown_timer_create(duration, &s_countdown_timer_id_max);
-    prv_evict_if_full();
-    countdown_timer_list_add(s_countdown_timers, COUNTDOWN_TIMERS_MAX,
-      &s_countdown_timers_count, countdown_timer);
-    countdown_timer_start(countdown_timer);
+    countdown_timer = prv_create_and_start_timer(duration);
     // update visuals
     menu_window_reload_data(s_menu_window);
     menu_window_refresh(s_menu_window);
@@ -530,7 +596,7 @@ static void menu_window_click_callback(uint8_t index, void *context) {
 
 static void initialize(void) {
   // connect to phone
-  phone_connect();
+  phone_connect(phone_start_timer_callback);
   // load the CountdownTimer data
   if (persist_exists(COUNTDOWN_TIMER_PERSIST_KEY)) {
     countdown_timer_list_load(s_countdown_timers, COUNTDOWN_TIMERS_MAX,
